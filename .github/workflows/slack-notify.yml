@@ -1,0 +1,43 @@
+name: Slack Notification on Push
+
+on:
+  push:
+    branches:
+      - '**'  # Trigger on push to any branch
+
+jobs:
+  notify-slack:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Fetch last 2 commits to get diff info
+      
+      - name: Get commit info
+        id: commit-info
+        run: |
+          echo "author=$(git log -1 --pretty=format:'%an')" >> $GITHUB_OUTPUT
+          echo "message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
+          echo "sha=$(git log -1 --pretty=format:'%h')" >> $GITHUB_OUTPUT
+          echo "url=https://github.com/${{ github.repository }}/commit/${{ github.sha }}" >> $GITHUB_OUTPUT
+      
+      - name: Send Slack notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          channel: '#general'  # Change this to your desired channel
+          text: |
+            📝 *Neue Änderung gepusht!*
+            
+            *Repository:* ${{ github.repository }}
+            *Branch:* ${{ github.ref_name }}
+            *Author:* ${{ steps.commit-info.outputs.author }}
+            *Commit:* ${{ steps.commit-info.outputs.sha }}
+            *Message:* ${{ steps.commit-info.outputs.message }}
+            
+            <${{ steps.commit-info.outputs.url }}|View Commit>
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: always()
